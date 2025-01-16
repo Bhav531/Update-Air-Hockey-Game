@@ -1,0 +1,213 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Hockey Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            position: relative;
+        }
+        canvas {
+            background: #0099cc;
+            display: block;
+        }
+        #message {
+            position: absolute;
+            font-size: 24px;
+            color: red;
+            text-align: center;
+            width: 100%;
+            top: 20px;
+        }
+        #welcome {
+            position: absolute;
+            font-size: 48px;
+            color: yellow;
+            text-align: center;
+            width: 100%;
+            top: 100px;
+            animation: vibrate 0.1s infinite;
+        }
+        @keyframes vibrate {
+            0% { transform: translate(0); }
+            25% { transform: translate(-1px, 1px); }
+            50% { transform: translate(-1px, -2px); }
+            75% { transform: translate(2px, 1px); }
+            100% { transform: translate(0); }
+        }
+        #levelSelector {
+            position: absolute;
+            top: 200px;
+            width: 100%;
+            text-align: center;
+        }
+        .level-button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 18px;
+            background: #333;
+            color: white;
+            border: 2px solid yellow;
+            cursor: pointer;
+        }
+        .level-button:hover {
+            background: yellow;
+            color: black;
+        }
+        #controlMessage {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    font-size: 20px;
+    color: orange;
+    text-align: center;
+    animation: scrollText 15s linear infinite; /* Slower animation */
+}
+
+        @keyframes scrollText {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+} 
+    </style>
+</head>
+<body>
+    <canvas id="airHockey"></canvas>
+    <div id="welcome">Welcome to the Air Hockey Battle!</div>
+    <div id="message">Choose your difficulty level to start!</div>
+    <div id="controlMessage">Use WASD or arrow keys to move</div>
+    <div id="levelSelector">
+        <button class="level-button" onclick="startGame(1)">Easy</button>
+        <button class="level-button" onclick="startGame(2)">Medium</button>
+        <button class="level-button" onclick="startGame(3)">Bhav Level</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('airHockey');
+        const ctx = canvas.getContext('2d');
+        const messageDiv = document.getElementById('message');
+        const welcomeDiv = document.getElementById('welcome');
+        const levelSelectorDiv = document.getElementById('levelSelector');
+
+        const paddleWidth = 10, paddleHeight = 100, puckRadius = 10;
+        let player1 = { x: 0, y: 0, score: 0 };
+        let player2 = { x: 0, y: 0, score: 0 };
+        let puck = { x: 0, y: 0, dx: 9.282, dy: 9.282 }; 
+        let aiSpeed = 9.282; 
+        let level = 1; 
+        let gamePaused = true; 
+        let keys = { w: false, s: false, ArrowUp: false, ArrowDown: false };
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            player1.x = 0;
+            player1.y = canvas.height / 2 - paddleHeight / 2;
+            player2.x = canvas.width - paddleWidth;
+            player2.y = canvas.height / 2 - paddleHeight / 2;
+            resetPuck();
+        }
+
+        function resetPuck() {
+            puck.x = canvas.width / 2;
+            puck.y = canvas.height / 2;
+            puck.dx = (Math.random() > 0.5 ? 1 : -1) * (0.8 * (9.282 + level * 3.094)); 
+puck.dy = (Math.random() > 0.5 ? 1 : -1) * (0.8 * (9.282 + level * 3.094));
+
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(player1.x, player1.y, paddleWidth, paddleHeight);
+            ctx.fillRect(player2.x, player2.y, paddleWidth, paddleHeight);
+            ctx.beginPath();
+            ctx.arc(puck.x, puck.y, puckRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.font = "20px Arial";
+            ctx.fillText(`Player 1: ${player1.score}`, 50, 30);
+            ctx.fillText(`Player 2: ${player2.score}`, canvas.width - 150, 30);
+        }
+
+        function update() {
+            if (gamePaused) return;
+
+            puck.x += puck.dx;
+            puck.y += puck.dy;
+
+            if (puck.y + puckRadius > canvas.height || puck.y - puckRadius < 0) {
+                puck.dy *= -1;
+            }
+
+            if (puck.x - puckRadius < player1.x + paddleWidth && puck.y > player1.y && puck.y < player1.y + paddleHeight) {
+                puck.dx *= -1;
+                puck.x = player1.x + paddleWidth + puckRadius;
+            }
+            if (puck.x + puckRadius > player2.x && puck.y > player2.y && puck.y < player2.y + paddleHeight) {
+                puck.dx *= -1;
+                puck.x = player2.x - puckRadius;
+            }
+
+            if (puck.x - puckRadius < 0) {
+                player2.score++;
+                showMessage("Computer Scored!");
+                resetPuck();
+            }
+            if (puck.x + puckRadius > canvas.width) {
+                player1.score++;
+                showMessage("You Scored!");
+                resetPuck();
+            }
+
+            player2.y += Math.sign(puck.y - (player2.y + paddleHeight / 2)) * aiSpeed; 
+            player2.y = Math.max(Math.min(player2.y, canvas.height - paddleHeight), 0);
+
+            if (keys.w || keys.ArrowUp) {
+    player1.y = Math.max(player1.y - 18, 0); 
+}
+if (keys.s || keys.ArrowDown) {
+    player1.y = Math.min(player1.y + 18, canvas.height - paddleHeight); 
+}
+
+        }
+
+        function showMessage(text) {
+    messageDiv.textContent = text;
+    setTimeout(() => {
+        messageDiv.textContent = "Use W,A,S,D or arrow keys to move..."; // Updated message
+    }, 3000);
+}
+
+        function startGame(selectedLevel) {
+            level = selectedLevel;
+            aiSpeed = 12 + level * 2; // AI is undefeatable
+            levelSelectorDiv.style.display = 'none'; 
+            welcomeDiv.style.opacity = 0; 
+            gamePaused = false; 
+            resizeCanvas();
+            gameLoop();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key in keys) keys[e.key] = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key in keys) keys[e.key] = false;
+        });
+    </script>
+</body>
+</html>
